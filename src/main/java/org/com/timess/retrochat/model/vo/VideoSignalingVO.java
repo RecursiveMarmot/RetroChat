@@ -28,4 +28,9 @@ public class VideoSignalingVO implements Serializable {
      */
     private String content;
 
+    /**
+     * 聊天id
+     */
+    private String roomId;
+
 }

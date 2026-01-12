@@ -30,7 +30,7 @@
          */
         @MessageMapping("/video/signal")
         public void handleVideoSignal(@Payload Map<String, Object> payload, Principal principal) {
-            signalingService.handleSignalingMessage(payload, principal);
+//            signalingService.handleSignalingMessage(payload, principal);
         }
 
         /**

@@ -21,6 +21,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 视频信令服务
@@ -30,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class VideoSignalingService {
     
     private final SimpMessagingTemplate messagingTemplate;
+
     private final ObjectMapper objectMapper;
 
     @Resource
@@ -37,6 +40,7 @@ public class VideoSignalingService {
     
     // 存储用户会话信息
     private final Map<String, String> userSessions = new ConcurrentHashMap<>();
+
     // 存储通话房间信息
     private final Map<String, VideoRoom> videoRooms = new ConcurrentHashMap<>();
     
@@ -66,7 +70,10 @@ public class VideoSignalingService {
                     toUserId,
                     "/queue/video",
                     incomingCall);
-            return new VideoSignalingVO(true, "通话请求已发送到:"+ toUserId);
+            // 生成唯一的 roomId（使用双方用户ID和时间戳）
+            String fromUserId = String.valueOf(loginUser.getId());
+            String roomId = generateRoomId(fromUserId, toUserId);
+            return new VideoSignalingVO(true, "通话请求已发送到:"+ toUserId, roomId);
         } catch (Exception e) {
             log.error("发送通话请求失败", e);
             return null;
@@ -74,209 +81,257 @@ public class VideoSignalingService {
     }
 
     /**
-     * 处理视频通话信令消息
+     * 建立WebRTC连接提议
+     * @param payload
+     * @param principal
      */
-    public void handleSignalingMessage(Map<String, Object> payload, Principal principal) {
-        try {
-            String type = (String) payload.get("type");
+    public void handleOfferMessage(Map<String, Object> payload, Principal principal) {
+        try{
             String to = (String) payload.get("to");
             String roomId = (String) payload.get("roomId");
-            
-            if (principal instanceof VideoPrincipal) {
-                VideoPrincipal videoPrincipal = (VideoPrincipal) principal;
+            if (principal instanceof VideoPrincipal videoPrincipal) {
                 String from = videoPrincipal.getName();
-                
-                switch (type) {
-                    case "offer":
-                        sendOffer(from, to, payload.get("offer"), roomId);
-                        break;
-                    case "answer":
-                        sendAnswer(from, to, payload.get("answer"), roomId);
-                        break;
-                    case "ice-candidate":
-                        sendIceCandidate(from, to, payload.get("candidate"), roomId);
-                        break;
-                    case "join":
-                        handleUserJoin(from, roomId);
-                        break;
-                    case "leave":
-                        handleUserLeave(from, roomId);
-                        break;
-                    case "call":
-                        initiateCall(from, to, payload);
-                        break;
-                    case "accept":
-                        acceptCall(from, to, roomId);
-                        break;
-                    case "reject":
-                        rejectCall(from, to, roomId);
-                        break;
-                    case "end":
-                        endCall(from, to, roomId);
-                        break;
-                }
+                Map<String, Object> message = Map.of(
+                        "type", "offer",
+                        "from", from,
+                        "offer", payload.get("offer"),
+                        "roomId", roomId,
+                        "timestamp", System.currentTimeMillis()
+                );
+                messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
+                log.info("用户 {} 向 {} 发送了offer，房间: {}", from, to, roomId);
             }
         } catch (Exception e) {
             log.error("处理视频信令消息失败", e);
         }
     }
-    
+
     /**
-     * 发送Offer
+     * WebRTC连接应答
+     * @param payload
+     * @param principal
      */
-    private void sendOffer(String from, String to, Object offer, String roomId) {
-        Map<String, Object> message = Map.of(
-            "type", "offer",
-            "from", from,
-            "offer", offer,
-            "roomId", roomId,
-            "timestamp", System.currentTimeMillis()
-        );
-        
-        messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
-        log.info("用户 {} 向 {} 发送了offer，房间: {}", from, to, roomId);
+    public void handleAnswerMessage(Map<String, Object> payload, Principal principal) {
+        try{
+            String to = (String) payload.get("to");
+            String roomId = (String) payload.get("roomId");
+            if (principal instanceof VideoPrincipal videoPrincipal) {
+                String from = videoPrincipal.getName();
+                Map<String, Object> message = Map.of(
+                        "type", "answer",
+                        "from", from,
+                        "answer", payload.get("answer"),
+                        "roomId", roomId,
+                        "timestamp", System.currentTimeMillis()
+                );
+                messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
+                log.info("用户 {} 向 {} 发送了answer，房间: {}", from, to, roomId);
+            }
+        } catch (Exception e) {
+            log.error("处理视频信令消息失败", e);
+        }
     }
-    
+
     /**
-     * 发送Answer
+     * ICE候选交换
+     * @param payload
+     * @param principal
      */
-    private void sendAnswer(String from, String to, Object answer, String roomId) {
-        Map<String, Object> message = Map.of(
-            "type", "answer",
-            "from", from,
-            "answer", answer,
-            "roomId", roomId,
-            "timestamp", System.currentTimeMillis()
-        );
-        
-        messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
-        log.info("用户 {} 向 {} 发送了answer，房间: {}", from, to, roomId);
+    public void handleCandidateMessage(Map<String, Object> payload, Principal principal) {
+        try{
+            String to = (String) payload.get("to");
+            String roomId = (String) payload.get("roomId");
+            if (principal instanceof VideoPrincipal videoPrincipal) {
+                String from = videoPrincipal.getName();
+                Map<String, Object> message = Map.of(
+                        "type", "ice-candidate",
+                        "from", from,
+                        "candidate", payload.get("ice-candidate"),
+                        "roomId", roomId,
+                        "timestamp", System.currentTimeMillis()
+                );
+                messagingTemplate.convertAndSendToUser(to, "/queue/video", message);
+            }
+        } catch (Exception e) {
+            log.error("处理视频信令消息失败", e);
+        }
     }
-    
-    /**
-     * 发送ICE候选
-     */
-    private void sendIceCandidate(String from, String to, Object candidate, String roomId) {
-        Map<String, Object> message = Map.of(
-            "type", "ice-candidate",
-            "from", from,
-            "candidate", candidate,
-            "roomId", roomId,
-            "timestamp", System.currentTimeMillis()
-        );
-        messagingTemplate.convertAndSendToUser(to, "/queue/video", message);
-    }
-    
+
     /**
      * 用户加入房间
+     * @param payload
+     * @param principal
      */
-    private void handleUserJoin(String userId, String roomId) {
-        VideoRoom room = videoRooms.computeIfAbsent(roomId, id -> new VideoRoom(id));
-        room.addUser(userId);
-        
-        // 通知房间内其他用户
-        room.getUsers().stream()
-            .filter(u -> !u.equals(userId))
-            .forEach(u -> {
-                Map<String, Object> message = Map.of(
-                    "type", "user-joined",
-                    "userId", userId,
-                    "roomId", roomId,
-                    "timestamp", System.currentTimeMillis()
-                );
-                messagingTemplate.convertAndSendToUser(u, "/queue/video", message);
-            });
-        
-        log.info("用户 {} 加入了房间 {}", userId, roomId);
+    public void handleJoinMessage(Map<String, Object> payload, Principal principal) {
+        try{
+            String roomId = (String) payload.get("roomId");
+            if (principal instanceof VideoPrincipal videoPrincipal) {
+                String from = videoPrincipal.getName();
+                VideoRoom room = videoRooms.computeIfAbsent(roomId, id -> new VideoRoom(id));
+                String userId = from;
+                room.addUser(userId);
+                // 通知房间内其他用户
+                room.getUsers().stream()
+                        .filter(u -> !u.equals(userId))
+                        .forEach(u -> {
+                            Map<String, Object> message = Map.of(
+                                    "type", "user-joined",
+                                    "userId", userId,
+                                    "roomId", roomId,
+                                    "timestamp", System.currentTimeMillis()
+                            );
+                            messagingTemplate.convertAndSendToUser(u, "/queue/video", message);
+                        });
+                log.info("用户 {} 加入了房间 {}", userId, roomId);
+            }
+        } catch (Exception e) {
+            log.error("处理视频信令消息失败", e);
+        }
     }
-    
-    /**
-     * 发起呼叫
-     */
-    private void initiateCall(String from, String to, Map<String, Object> payload) {
-        String callId = (String) payload.get("callId");
-        String roomId = "room_" + callId;
-        
-        Map<String, Object> message = Map.of(
-            "type", "incoming-call",
-            "from", from,
-            "to", to,
-            "callId", callId,
-            "roomId", roomId,
-            "timestamp", System.currentTimeMillis()
-        );
-        
-        messagingTemplate.convertAndSendToUser(to, "/queue/video", message);
-        log.info("用户 {} 向 {} 发起视频呼叫，呼叫ID: {}", from, to, callId);
-    }
-    
-    /**
-     * 接受呼叫
-     */
-    private void acceptCall(String from, String to, String roomId) {
-        Map<String, Object> message = Map.of(
-            "type", "call-accepted",
-            "from", from,
-            "to", to,
-            "roomId", roomId,
-            "timestamp", System.currentTimeMillis()
-        );
-        
-        messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
-        log.info("用户 {} 接受了 {} 的视频呼叫", from, to);
-    }
-    
-    /**
-     * 拒绝呼叫
-     */
-    private void rejectCall(String from, String to, String roomId) {
-        Map<String, Object> message = Map.of(
-            "type", "call-rejected",
-            "from", from,
-            "to", to,
-            "roomId", roomId,
-            "timestamp", System.currentTimeMillis()
-        );
-        
-        messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
-        log.info("用户 {} 拒绝了 {} 的视频呼叫", from, to);
-    }
-    
-    /**
-     * 结束通话
-     */
-    private void endCall(String from, String to, String roomId) {
-        Map<String, Object> message = Map.of(
-            "type", "call-ended",
-            "from", from,
-            "to", to,
-            "roomId", roomId,
-            "timestamp", System.currentTimeMillis()
-        );
-        
-        messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
-        
-        // 清理房间
-        videoRooms.remove(roomId);
-        log.info("用户 {} 结束了与 {} 的视频通话", from, to);
-    }
-    
+
     /**
      * 用户离开房间
+     * @param payload
+     * @param principal
      */
-    private void handleUserLeave(String userId, String roomId) {
-        VideoRoom room = videoRooms.get(roomId);
-        if (room != null) {
-            room.removeUser(userId);
-            
-            if (room.isEmpty()) {
-                videoRooms.remove(roomId);
+    public void handleLeaveMessage(Map<String, Object> payload, Principal principal) {
+        try{
+            String to = (String) payload.get("to");
+            String roomId = (String) payload.get("roomId");
+            if (principal instanceof VideoPrincipal videoPrincipal) {
+                String userId = videoPrincipal.getName();
+                VideoRoom room = videoRooms.get(roomId);
+                if (room != null) {
+                    room.removeUser(userId);
+
+                    if (room.isEmpty()) {
+                        videoRooms.remove(roomId);
+                    }
+                }
+                log.info("用户 {} 离开了房间 {}", userId, roomId);
             }
+        } catch (Exception e) {
+            log.error("处理视频信令消息失败", e);
         }
-        
-        log.info("用户 {} 离开了房间 {}", userId, roomId);
     }
-    
+
+    /**
+     * 发起视频通话
+     * @param payload
+     * @param principal
+     */
+    public void handleCallMessage(Map<String, Object> payload, Principal principal) {
+        try{
+            String to = (String) payload.get("to");
+            if (principal instanceof VideoPrincipal videoPrincipal) {
+                String from = videoPrincipal.getName();
+                String callId = (String) payload.get("callId");
+                String roomId = "room_" + callId;
+                Map<String, Object> message = Map.of(
+                        "type", "incoming-call",
+                        "from", from,
+                        "to", to,
+                        "callId", callId,
+                        "roomId", roomId,
+                        "timestamp", System.currentTimeMillis()
+                );
+                messagingTemplate.convertAndSendToUser(to, "/queue/video", message);
+                log.info("用户 {} 向 {} 发起视频呼叫，呼叫ID: {}", from, to, callId);
+            }
+        } catch (Exception e) {
+            log.error("处理视频信令消息失败", e);
+        }
+    }
+
+    /**
+     * 接受视频通话
+     * @param payload
+     * @param principal
+     */
+    public void handleAcceptMessage(Map<String, Object> payload, Principal principal) {
+        try{
+            String to = (String) payload.get("to");
+            String roomId = (String) payload.get("roomId");
+            if (principal instanceof VideoPrincipal videoPrincipal) {
+                String from = videoPrincipal.getName();
+                Map<String, Object> message = Map.of(
+                        "type", "call-accepted",
+                        "from", from,
+                        "to", to,
+                        "roomId", roomId,
+                        "timestamp", System.currentTimeMillis()
+                );
+                messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
+                log.info("用户 {} 接受了 {} 的视频呼叫", from, to);
+            }
+        } catch (Exception e) {
+            log.error("处理视频信令消息失败", e);
+        }
+    }
+
+   /**
+     * 拒绝视频通话
+     * @param payload
+     * @param principal
+     */
+    public void handleRejectMessage(Map<String, Object> payload, Principal principal) {
+        try{
+            String to = (String) payload.get("to");
+            String roomId = (String) payload.get("roomId");
+            if (principal instanceof VideoPrincipal videoPrincipal) {
+                String from = videoPrincipal.getName();
+                Map<String, Object> message = Map.of(
+                        "type", "call-rejected",
+                        "from", from,
+                        "to", to,
+                        "roomId", roomId,
+                        "timestamp", System.currentTimeMillis()
+                );
+                messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
+                log.info("用户 {} 拒绝了 {} 的视频呼叫", from, to);
+            }
+        } catch (Exception e) {
+            log.error("处理视频信令消息失败", e);
+        }
+    }
+
+    /**
+     * 结束视频通话
+     * @param payload
+     * @param principal
+     */
+    public void handleEndMessage(Map<String, Object> payload, Principal principal) {
+        try{
+            String to = (String) payload.get("to");
+            String roomId = (String) payload.get("roomId");
+            if (principal instanceof VideoPrincipal videoPrincipal) {
+                String from = videoPrincipal.getName();
+                Map<String, Object> message = Map.of(
+                        "type", "call-ended",
+                        "from", from,
+                        "to", to,
+                        "roomId", roomId,
+                        "timestamp", System.currentTimeMillis()
+                );
+                messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
+                // 清理房间
+                videoRooms.remove(roomId);
+                log.info("用户 {} 结束了与 {} 的视频通话", from, to);
+            }
+        } catch (Exception e) {
+            log.error("处理视频信令消息失败", e);
+        }
+    }
+
+    // 生成唯一的 roomId
+    private String generateRoomId(String fromUserId, String toUserId) {
+        // 确保同一对用户的 roomId 一致，按用户ID排序
+        String sortedUsers = Stream.of(fromUserId, toUserId)
+                .sorted()
+                .collect(Collectors.joining("_"));
+        return "room_" + sortedUsers + "_" + System.currentTimeMillis();
+    }
+
     /**
      * 视频房间类
      */
