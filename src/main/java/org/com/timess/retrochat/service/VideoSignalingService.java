@@ -1,9 +1,18 @@
 package org.com.timess.retrochat.service;
 
 import cn.hutool.core.collection.ConcurrentHashSet;
+import cn.hutool.core.util.ObjectUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.com.timess.retrochat.aop.VideoHandshakeHandler.VideoPrincipal;
+import org.com.timess.retrochat.exception.BusinessException;
+import org.com.timess.retrochat.exception.ErrorCode;
+import org.com.timess.retrochat.exception.ThrowUtils;
+import org.com.timess.retrochat.model.entity.user.User;
+import org.com.timess.retrochat.model.vo.UserVO;
+import org.com.timess.retrochat.model.vo.VideoSignalingVO;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +31,9 @@ public class VideoSignalingService {
     
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
+
+    @Resource
+    private UserService userService;
     
     // 存储用户会话信息
     private final Map<String, String> userSessions = new ConcurrentHashMap<>();
@@ -33,7 +45,34 @@ public class VideoSignalingService {
         this.messagingTemplate = messagingTemplate;
         this.objectMapper = objectMapper;
     }
-    
+
+    public VideoSignalingVO handleSignaling(String toUserId, HttpServletRequest request) {
+        UserVO loginUser = userService.getLoginUser(request);
+        if(ObjectUtil.isEmpty(loginUser)){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "当前登陆用户错误");
+        }
+        //判定接电话方的userId是否存在
+        User byId = userService.getById(Long.parseLong(toUserId));
+        ThrowUtils.throwIf(ObjectUtil.isEmpty(byId), ErrorCode.PARAMS_ERROR, "待通话用户不存在");
+        //通过WebSocket发送通话请求给被叫方
+        Map<String, Object> incomingCall = Map.of(
+                "type", "incoming-call",
+                "from", loginUser.getId(),
+                "to", toUserId,
+                "timestamp", System.currentTimeMillis()
+        );
+        try {
+            messagingTemplate.convertAndSendToUser(
+                    toUserId,
+                    "/queue/video",
+                    incomingCall);
+            return new VideoSignalingVO(true, "通话请求已发送到:"+ toUserId);
+        } catch (Exception e) {
+            log.error("发送通话请求失败", e);
+            return null;
+        }
+    }
+
     /**
      * 处理视频通话信令消息
      */
@@ -94,7 +133,7 @@ public class VideoSignalingService {
             "timestamp", System.currentTimeMillis()
         );
         
-        messagingTemplate.convertAndSendToUser(to, "/queue/video", message);
+        messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
         log.info("用户 {} 向 {} 发送了offer，房间: {}", from, to, roomId);
     }
     
@@ -110,7 +149,7 @@ public class VideoSignalingService {
             "timestamp", System.currentTimeMillis()
         );
         
-        messagingTemplate.convertAndSendToUser(to, "/queue/video", message);
+        messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
         log.info("用户 {} 向 {} 发送了answer，房间: {}", from, to, roomId);
     }
     
@@ -125,7 +164,6 @@ public class VideoSignalingService {
             "roomId", roomId,
             "timestamp", System.currentTimeMillis()
         );
-        
         messagingTemplate.convertAndSendToUser(to, "/queue/video", message);
     }
     
@@ -168,7 +206,7 @@ public class VideoSignalingService {
             "timestamp", System.currentTimeMillis()
         );
         
-        messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
+        messagingTemplate.convertAndSendToUser(to, "/queue/video", message);
         log.info("用户 {} 向 {} 发起视频呼叫，呼叫ID: {}", from, to, callId);
     }
     

@@ -27,14 +27,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setAllowedOriginPatterns("*")
                 .addInterceptors(authHandshakeInterceptor())
                 .setHandshakeHandler(customHandshakeHandler());
-
-        // 视频通话WebSocket端点 - 使用不同的握手处理器和拦截器
-        registry.addEndpoint("/video-ws")
-                .setAllowedOriginPatterns("*")
-                // 视频通话需要更严格的认证，可以使用相同的拦截器或专门的视频拦截器
-                .addInterceptors(videoHandshakeInterceptor())
-                .setHandshakeHandler(videoHandshakeHandler());
-
     }
 
     @Bean
@@ -61,7 +53,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         // 启用简单内存消息代理
         // /video 前缀用于视频相关主题
-        registry.enableSimpleBroker("/topic", "/queue", "/user", "/video");
+        registry.enableSimpleBroker("/topic", "/queue", "/video");
         // 客户端发送消息的前缀
         registry.setApplicationDestinationPrefixes("/app");
         // 点对点消息前缀
@@ -74,6 +66,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // 视频通话需要更大的缓冲区
         registry.setMessageSizeLimit(512 * 1024); // 512KB
         registry.setSendBufferSizeLimit(1024 * 1024); // 1MB
-        registry.setTimeToFirstMessage(30000); // 设置首次消息超时时间（毫秒）
+        registry.setTimeToFirstMessage(20000); // 设置首次消息超时时间（毫秒）
     }
 }
