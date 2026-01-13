@@ -26,16 +26,46 @@ jobs:
         cache: maven
         
     - name: Build with Maven
-      run: mvn -B package --file pom.xml
+      run: mvn -B clean compile package
       
+    # 使用忽略错误的 Javadoc 生成
     - name: Generate Javadoc
-      run: mvn javadoc:javadoc
+      run: mvn javadoc:javadoc -DfailOnError=false || echo "Javadoc generated with warnings"
       
     - name: Prepare docs
       run: |
         mkdir -p _site
-        echo '<html><body><h1>RetroChat Docs</h1><p><a href="javadoc/">Javadoc</a></p></body></html>' > _site/index.html
-        cp -r target/site/apidocs/ _site/javadoc/ || echo "No javadoc found"
+        echo '<html>
+        <head>
+            <title>RetroChat Documentation</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; }
+                h1 { color: #333; }
+                .box { background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0; }
+                a { color: #0366d6; text-decoration: none; }
+                a:hover { text-decoration: underline; }
+            </style>
+        </head>
+        <body>
+            <h1>RetroChat Backend Documentation</h1>
+            <div class="box">
+                <h2>📖 API Documentation</h2>
+                <p><a href="javadoc/">View Javadoc</a> - Auto-generated API documentation</p>
+            </div>
+            <p>Documentation generated on GitHub Actions.</p>
+        </body>
+        </html>' > _site/index.html
+        
+        # 检查 javadoc 是否存在
+        if [ -d "target/apidocs" ]; then
+          cp -r target/apidocs/ _site/javadoc/
+        elif [ -d "target/site/apidocs" ]; then
+          cp -r target/site/apidocs/ _site/javadoc/
+        else
+          echo "Creating placeholder javadoc"
+          mkdir -p _site/javadoc
+          echo '<html><body><h2>Javadoc</h2><p>API documentation would be here. Lombok annotations may prevent full generation.</p></body></html>' > _site/javadoc/index.html
+        fi
         
     - name: Upload Pages artifact
       uses: actions/upload-pages-artifact@v3
