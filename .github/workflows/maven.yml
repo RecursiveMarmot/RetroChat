@@ -55,117 +55,125 @@ jobs:
       run: |
         # 创建主目录
         mkdir -p _site
-        # 创建简单的首页
-        cat > _site/index.html << 'EOF'
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>RetroChat Backend Documentation</title>
-            <style>
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-                    line-height: 1.6;
-                    max-width: 800px;
-                    margin: 0 auto;
-                    padding: 20px;
-                    color: #333;
-                }
-                header {
-                    text-align: center;
-                    margin-bottom: 40px;
-                    padding-bottom: 20px;
-                    border-bottom: 2px solid #f0f0f0;
-                }
-                h1 {
-                    color: #24292e;
-                }
-                .card {
-                    background: #f6f8fa;
-                    border: 1px solid #e1e4e8;
-                    border-radius: 6px;
-                    padding: 20px;
-                    margin: 20px 0;
-                }
-                .card h2 {
-                    margin-top: 0;
-                    color: #0366d6;
-                }
-                .btn {
-                    display: inline-block;
-                    padding: 10px 20px;
-                    background: #2ea44f;
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 6px;
-                    font-weight: bold;
-                    margin: 10px 5px;
-                }
-                .btn:hover {
-                    background: #2c974b;
-                }
-                .links {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 10px;
-                    margin-top: 20px;
-                }
-                footer {
-                    margin-top: 40px;
-                    text-align: center;
-                    color: #6a737d;
-                    font-size: 14px;
-                    border-top: 1px solid #eaecef;
-                    padding-top: 20px;
-                }
-            </style>
-        </head>
-        <body>
-            <header>
-                <h1>📚 RetroChat Backend Documentation</h1>
-                <p>Spring Boot based chat application backend</p>
-            </header>
-            
-            <div class="card">
-                <h2>📖 API Documentation</h2>
-                <p>Complete Javadoc for all classes and methods in the project.</p>
-                <a href="javadoc/" class="btn">View Javadoc</a>
-            </div>
-            
-            <div class="card">
-                <h2>⚙️ Project Information</h2>
-                <p><strong>Technology Stack:</strong></p>
-                <ul>
-                    <li>Java 21</li>
-                    <li>Spring Boot 3.5.6</li>
-                    <li>Maven</li>
-                </ul>
-                <div class="links">
-                    <a href="https://github.com/${{ github.repository }}" class="btn">GitHub Repository</a>
-                    <a href="https://github.com/${{ github.repository }}/actions" class="btn">Build Status</a>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2>🚀 Quick Start</h2>
-                <pre><code># Clone repository
-git clone https://github.com/${{ github.repository }}.git
+        
+        # 创建简单的首页 - 简化版本避免语法问题
+        echo '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RetroChat Backend Documentation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        h1 {
+            color: #24292e;
+        }
+        .card {
+            background: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .card h2 {
+            margin-top: 0;
+            color: #0366d6;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #2ea44f;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #2c974b;
+        }
+        .links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #6a737d;
+            font-size: 14px;
+            border-top: 1px solid #eaecef;
+            padding-top: 20px;
+        }
+        pre {
+            background: #f6f8fa;
+            padding: 16px;
+            border-radius: 6px;
+            overflow: auto;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📚 RetroChat Backend Documentation</h1>
+        <p>Spring Boot based chat application backend</p>
+    </header>
+    
+    <div class="card">
+        <h2>📖 API Documentation</h2>
+        <p>Complete Javadoc for all classes and methods in the project.</p>
+        <a href="javadoc/" class="btn">View Javadoc</a>
+    </div>
+    
+    <div class="card">
+        <h2>⚙️ Project Information</h2>
+        <p><strong>Technology Stack:</strong></p>
+        <ul>
+            <li>Java 21</li>
+            <li>Spring Boot 3.5.6</li>
+            <li>Maven</li>
+        </ul>
+        <div class="links">
+            <a href="https://github.com/'"'"'${{ github.repository }}'"'" class="btn">GitHub Repository</a>
+            <a href="https://github.com/'"'"'${{ github.repository }}'"'"/actions" class="btn">Build Status</a>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>🚀 Quick Start</h2>
+        <pre><code># Clone repository
+git clone https://github.com/'"'"'${{ github.repository }}'"'"'.git
 
 # Build project
 mvn clean package
 
 # Run application
 mvn spring-boot:run</code></pre>
-            </div>
-            
-            <footer>
-                <p>Documentation generated on: $(date +'%Y-%m-%d %H:%M:%S')</p>
-                <p>Build: <a href="https://github.com/${{ github.repository }}/commit/${{ github.sha }}">${{ github.sha }}</a></p>
-            </footer>
-        </body>
-        </html>
-        EOF
+    </div>
+    
+    <footer>
+        <p>Documentation generated on: $(date +'"'"'%Y-%m-%d %H:%M:%S'"'"')</p>
+        <p>Build: <a href="https://github.com/'"'"'${{ github.repository }}'"'"/commit/'"'"'${{ github.sha }}'"'"'>'"'"'${{ github.sha }}'"'"'</a></p>
+    </footer>
+</body>
+</html>' > _site/index.html
         
         # 复制 Javadoc 到子目录
         if [ -d "target/site/apidocs" ]; then
