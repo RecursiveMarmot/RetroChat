@@ -26,11 +26,11 @@
 
         /**
          * 处理视频信令消息
-         * 客户端发送到 /app/video/signal
+         * 客户端发送到 /app/queue/video-call
          */
-        @MessageMapping("/video/signal")
-        public void handleVideoSignal(@Payload Map<String, Object> payload, Principal principal) {
-//            signalingService.handleSignalingMessage(payload, principal);
+        @MessageMapping("/queue/video-call")
+        public void handleVideoCall(@Payload Map<String, Object> payload, Principal principal) {
+            signalingService.handleVideoCallAction(payload, principal);
         }
 
         /**

@@ -31,6 +31,6 @@ public class VideoSignalingVO implements Serializable {
     /**
      * 聊天id
      */
-    private String roomId;
+//    private String roomId;
 
 }

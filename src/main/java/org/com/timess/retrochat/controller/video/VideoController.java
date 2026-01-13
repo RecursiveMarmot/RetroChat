@@ -31,7 +31,7 @@ public class VideoController {
             JsonObject jsonObject = JsonParser.parseString(jsonString).getAsJsonObject();
             // 直接获取字段值
             String toUserId = jsonObject.get("toUserId").getAsString();
-            return ResultUtils.success(signalingService.handleSignaling(toUserId, request));
+            return ResultUtils.success(signalingService.handleCallMessage(toUserId, request));
         }catch (Exception e){
             log.error(e.getMessage());
             throw new BusinessException(ErrorCode.PARAMS_ERROR, e.getMessage());
