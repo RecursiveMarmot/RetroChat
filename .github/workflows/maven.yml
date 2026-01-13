@@ -26,46 +26,169 @@ jobs:
         cache: maven
         
     - name: Build with Maven
-      run: mvn -B clean compile package
+      run: mvn -B clean package
       
-    # 使用忽略错误的 Javadoc 生成
-    - name: Generate Javadoc
-      run: mvn javadoc:javadoc -DfailOnError=false || echo "Javadoc generated with warnings"
-      
-    - name: Prepare docs
+    - name: Generate project info
       run: |
+        # 创建文档目录
         mkdir -p _site
-        echo '<html>
-        <head>
-            <title>RetroChat Documentation</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 40px; }
-                h1 { color: #333; }
-                .box { background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0; }
-                a { color: #0366d6; text-decoration: none; }
-                a:hover { text-decoration: underline; }
-            </style>
-        </head>
-        <body>
-            <h1>RetroChat Backend Documentation</h1>
-            <div class="box">
-                <h2>📖 API Documentation</h2>
-                <p><a href="javadoc/">View Javadoc</a> - Auto-generated API documentation</p>
-            </div>
-            <p>Documentation generated on GitHub Actions.</p>
-        </body>
-        </html>' > _site/index.html
         
-        # 检查 javadoc 是否存在
-        if [ -d "target/apidocs" ]; then
-          cp -r target/apidocs/ _site/javadoc/
-        elif [ -d "target/site/apidocs" ]; then
-          cp -r target/site/apidocs/ _site/javadoc/
-        else
-          echo "Creating placeholder javadoc"
-          mkdir -p _site/javadoc
-          echo '<html><body><h2>Javadoc</h2><p>API documentation would be here. Lombok annotations may prevent full generation.</p></body></html>' > _site/javadoc/index.html
-        fi
+        # 创建 README 风格的首页
+        cat > _site/index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RetroChat Backend</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown.min.css">
+    <style>
+        .markdown-body {
+            box-sizing: border-box;
+            min-width: 200px;
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 45px;
+        }
+        
+        @media (max-width: 767px) {
+            .markdown-body {
+                padding: 15px;
+            }
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eaecef;
+        }
+        
+        .badges {
+            margin: 20px 0;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 0 5px 5px 0;
+            background: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <article class="markdown-body">
+        <div class="header">
+            <h1>RetroChat Backend</h1>
+            <p>A modern chat application backend built with Spring Boot</p>
+            <div class="badges">
+                <span class="badge">Java 21</span>
+                <span class="badge">Spring Boot 3.5.6</span>
+                <span class="badge">Maven</span>
+                <span class="badge">WebSocket</span>
+            </div>
+        </div>
+
+        <h2>📋 Project Overview</h2>
+        <p>RetroChat is a real-time chat application backend providing RESTful APIs and WebSocket support for real-time messaging.</p>
+
+        <h2>🚀 Quick Start</h2>
+        <h3>Prerequisites</h3>
+        <ul>
+            <li>Java 21+</li>
+            <li>Maven 3.6+</li>
+            <li>Git</li>
+        </ul>
+
+        <h3>Build and Run</h3>
+        <pre><code class="language-bash"># Clone repository
+git clone https://github.com/${GITHUB_REPOSITORY}.git
+cd RetroChat
+
+# Build the project
+mvn clean package
+
+# Run the application
+mvn spring-boot:run</code></pre>
+
+        <h2>🏗️ Project Structure</h2>
+        <pre><code>src/main/java/
+├── org/com/timess/retrochat/
+│   ├── RetrochatApplication.java      # Main application class
+│   ├── config/                        # Configuration classes
+│   ├── controller/                    # REST controllers
+│   ├── service/                       # Business logic
+│   ├── manager/                       # External service managers
+│   └── model/                         # Data models</code></pre>
+
+        <h2>🔧 API Endpoints</h2>
+        <p>The application provides the following main endpoints:</p>
+        <ul>
+            <li><code>GET /api/health</code> - Health check endpoint</li>
+            <li><code>POST /api/messages</code> - Send messages</li>
+            <li><code>GET /api/messages</code> - Get message history</li>
+            <li><code>WS /ws/chat</code> - WebSocket for real-time chat</li>
+        </ul>
+
+        <h2>📁 Configuration</h2>
+        <p>Configuration files are located in <code>src/main/resources/</code>:</p>
+        <ul>
+            <li><code>application.properties</code> - Main configuration</li>
+            <li><code>application-dev.properties</code> - Development profile</li>
+            <li><code>application-prod.properties</code> - Production profile</li>
+        </ul>
+
+        <h2>🛠️ Development</h2>
+        <h3>Build Commands</h3>
+        <pre><code class="language-bash"># Run tests
+mvn test
+
+# Generate dependency tree
+mvn dependency:tree
+
+# Create executable JAR
+mvn clean package -DskipTests</code></pre>
+
+        <h3>Code Style</h3>
+        <p>The project uses standard Java coding conventions with Lombok annotations for boilerplate reduction.</p>
+
+        <h2>📊 CI/CD Status</h2>
+        <p>This project uses GitHub Actions for continuous integration and deployment:</p>
+        <ul>
+            <li>✅ Automated builds on every push</li>
+            <li>✅ Dependency security scanning</li>
+            <li>✅ Documentation deployment to GitHub Pages</li>
+        </ul>
+
+        <h2>📄 Documentation</h2>
+        <ul>
+            <li><a href="https://github.com/${GITHUB_REPOSITORY}/blob/main/README.md">README</a> - Project overview</li>
+            <li><a href="https://github.com/${GITHUB_REPOSITORY}/actions">Build Pipeline</a> - CI/CD status</li>
+            <li><a href="https://github.com/${GITHUB_REPOSITORY}/dependency-graph">Dependency Graph</a> - Project dependencies</li>
+        </ul>
+
+        <h2>🤝 Contributing</h2>
+        <p>Feel free to submit issues and pull requests for improvements.</p>
+
+        <h2>📝 License</h2>
+        <p>This project is licensed under the MIT License - see the LICENSE file for details.</p>
+
+        <hr>
+        <footer>
+            <p><small>Documentation generated automatically on $(date +'%Y-%m-%d %H:%M:%S UTC')</small></p>
+            <p><small>Build SHA: <a href="https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}">${GITHUB_SHA:0:7}</a></small></p>
+        </footer>
+    </article>
+</body>
+</html>
+EOF
+        
+        # 替换变量
+        sed -i "s/\${GITHUB_REPOSITORY}/${{ github.repository }}/g" _site/index.html
+        sed -i "s/\${GITHUB_SHA}/${{ github.sha }}/g" _site/index.html
         
     - name: Upload Pages artifact
       uses: actions/upload-pages-artifact@v3
