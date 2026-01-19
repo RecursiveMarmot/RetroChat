@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.com.timess.retrochat.aop.VideoHandshakeHandler.VideoPrincipal;
+import org.com.timess.retrochat.aop.AuthHandshakeInterceptor;
 import org.com.timess.retrochat.exception.BusinessException;
 import org.com.timess.retrochat.exception.ErrorCode;
 import org.com.timess.retrochat.exception.ThrowUtils;
@@ -67,7 +67,7 @@ public class VideoSignalingService {
         try {
             messagingTemplate.convertAndSendToUser(
                     toUserId,
-                    "/queue/video",
+                    "/queue/video-call",
                     incomingCall);
             return new VideoSignalingVO(true, "通话请求已发送到:"+ toUserId);
         } catch (Exception e) {
@@ -84,8 +84,7 @@ public class VideoSignalingService {
     public void handleAcceptMessage(Map<String, Object> payload, Principal principal) {
         try{
             String to = (String) payload.get("to");
-            //TODO: bug --> 一下判定结果为false,导致无法发送消息
-            if (principal instanceof VideoPrincipal videoPrincipal) {
+            if (principal instanceof AuthHandshakeInterceptor.StompPrincipal videoPrincipal) {
                 String from = videoPrincipal.getName();
                 Map<String, Object> message = Map.of(
                         "type", "call-accepted",
@@ -109,7 +108,7 @@ public class VideoSignalingService {
     public void handleRejectMessage(Map<String, Object> payload, Principal principal) {
         try{
             String to = (String) payload.get("to");
-            if (principal instanceof VideoPrincipal videoPrincipal) {
+            if (principal instanceof AuthHandshakeInterceptor.StompPrincipal videoPrincipal) {
                 String from = videoPrincipal.getName();
                 Map<String, Object> message = Map.of(
                         "type", "call-rejected",
@@ -133,7 +132,7 @@ public class VideoSignalingService {
     public void handleEndMessage(Map<String, Object> payload, Principal principal) {
         try{
             String to = (String) payload.get("to");
-            if (principal instanceof VideoPrincipal videoPrincipal) {
+            if (principal instanceof AuthHandshakeInterceptor.StompPrincipal videoPrincipal) {
                 String from = videoPrincipal.getName();
                 Map<String, Object> message = Map.of(
                         "type", "call-ended",
@@ -157,7 +156,7 @@ public class VideoSignalingService {
     public void handleOfferMessage(Map<String, Object> payload, Principal principal) {
         try{
             String to = (String) payload.get("to");
-            if (principal instanceof VideoPrincipal videoPrincipal) {
+            if (principal instanceof AuthHandshakeInterceptor.StompPrincipal videoPrincipal) {
                 String from = videoPrincipal.getName();
                 Map<String, Object> message = Map.of(
                         "type", "offer",
@@ -166,7 +165,7 @@ public class VideoSignalingService {
                         "offer", payload.get("offer"),
                         "timestamp", System.currentTimeMillis()
                 );
-                messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
+                messagingTemplate.convertAndSendToUser(to, "/queue/video-connect", message);
                 log.info("用户 {} 向 {} 发送了offer", from, to);
             }
         } catch (Exception e) {
@@ -182,7 +181,7 @@ public class VideoSignalingService {
     public void handleAnswerMessage(Map<String, Object> payload, Principal principal) {
         try{
             String to = (String) payload.get("to");
-            if (principal instanceof VideoPrincipal videoPrincipal) {
+            if (principal instanceof AuthHandshakeInterceptor.StompPrincipal videoPrincipal) {
                 String from = videoPrincipal.getName();
                 Map<String, Object> message = Map.of(
                         "type", "answer",
@@ -191,7 +190,7 @@ public class VideoSignalingService {
                         "answer", payload.get("answer"),
                         "timestamp", System.currentTimeMillis()
                 );
-                messagingTemplate.convertAndSendToUser(to, "/queue/video-call", message);
+                messagingTemplate.convertAndSendToUser(to, "/queue/video-connect", message);
                 log.info("用户 {} 向 {} 发送了answer ", from, to);
             }
         } catch (Exception e) {
@@ -207,7 +206,7 @@ public class VideoSignalingService {
     public void handleCandidateMessage(Map<String, Object> payload, Principal principal) {
         try{
             String to = (String) payload.get("to");
-            if (principal instanceof VideoPrincipal videoPrincipal) {
+            if (principal instanceof AuthHandshakeInterceptor.StompPrincipal videoPrincipal) {
                 String from = videoPrincipal.getName();
                 Map<String, Object> message = Map.of(
                         "type", "ice-candidate",
@@ -216,7 +215,7 @@ public class VideoSignalingService {
                         "candidate", payload.get("ice-candidate"),
                         "timestamp", System.currentTimeMillis()
                 );
-                messagingTemplate.convertAndSendToUser(to, "/queue/video", message);
+                messagingTemplate.convertAndSendToUser(to, "/queue/video-connect", message);
             }
         } catch (Exception e) {
             log.error("处理视频信令消息失败", e);
@@ -241,4 +240,30 @@ public class VideoSignalingService {
             log.error("处理视频信令消息失败", e);
         }
     }
+
+    /**
+     * 建立webrtc连接
+     * @param payload
+     * @param principal
+     */
+    public void handleWebRtcConnect(Map<String, Object> payload, Principal principal) {
+        try {
+            String action = (String) payload.get("type");
+            switch (action) {
+                case "offer":
+                    handleOfferMessage(payload, principal);
+                    break;
+                case "answer":
+                    handleAnswerMessage(payload, principal);
+                    break;
+                case "ice-candidate":
+                    handleCandidateMessage(payload, principal);
+                    break;
+            }
+        } catch (Exception e) {
+            log.error("建立webrtc异常", e);
+        }
+    }
+
+
 }

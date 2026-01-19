@@ -2,8 +2,6 @@ package org.com.timess.retrochat.config;
 
 import org.com.timess.retrochat.aop.AuthHandshakeInterceptor;
 import org.com.timess.retrochat.aop.CustomHandshakeHandler;
-import org.com.timess.retrochat.aop.VideoHandshakeHandler;
-import org.com.timess.retrochat.aop.VideoHandshakeInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -35,18 +33,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     @Bean
-    public VideoHandshakeInterceptor videoHandshakeInterceptor() {
-        return new VideoHandshakeInterceptor();
-    }
-
-    @Bean
     public CustomHandshakeHandler customHandshakeHandler() {
         return new CustomHandshakeHandler();
-    }
-
-    @Bean
-    public VideoHandshakeHandler videoHandshakeHandler() {
-        return new VideoHandshakeHandler();
     }
 
     @Override

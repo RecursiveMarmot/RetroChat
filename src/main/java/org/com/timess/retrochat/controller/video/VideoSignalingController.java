@@ -25,7 +25,7 @@
         }
 
         /**
-         * 处理视频信令消息
+         * 处理视频通话请求
          * 客户端发送到 /app/queue/video-call
          */
         @MessageMapping("/queue/video-call")
@@ -34,10 +34,19 @@
         }
 
         /**
+         * 处理视频通话请求
+         * 客户端发送到 /app/queue/video-call
+         */
+        @MessageMapping("/queue/video-connect")
+        public void handleWebrtc(@Payload Map<String, Object> payload, Principal principal) {
+            signalingService.handleWebRtcConnect(payload, principal);
+        }
+
+        /**
          * 用户订阅视频通知
          * 客户端订阅 /user/queue/video
          */
-        @SubscribeMapping("/user/queue/video")
+        @SubscribeMapping("/user/queue/video-call")
         public Map<String, Object> subscribeVideo(Principal principal) {
             log.info("用户 {} 订阅了视频通知", principal.getName());
             return Map.of(
